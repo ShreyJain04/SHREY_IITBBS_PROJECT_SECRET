@@ -10,9 +10,12 @@ const connectRedis = async () => {
 
   try {
     client = redis.createClient({
-      host: process.env.REDIS_HOST ,
-      port: process.env.REDIS_PORT ,
-      // password: process.env.REDIS_PASSWORD ,
+      url: process.env.REDIS_URL,
+      socket: {
+        tls: true, // Upstash requires TLS
+        keepAlive: true,
+        reconnectDelay: 1000,
+      },
       retry_strategy: (options) => {
         if (options.error && options.error.code === 'ECONNREFUSED') {
           console.log('Redis server is not running');
