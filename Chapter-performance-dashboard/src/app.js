@@ -3,10 +3,32 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const mongoose = require('mongoose');
+const https = require('https'); // ADD THIS LINE - Import https module
+const cron = require("node-cron");
 const { connectRedis } = require('./config/redis');
-const connectDB = require('./config/database'); // ADD THIS LINE
+const connectDB = require('./config/database'); 
 
 const app = express();
+
+const backendUrl = "https://shrey-iitbbs-project-secret.onrender.com/api/v1/chapters";
+
+// Cron job to keep server alive on render (every 3 minutes)
+cron.schedule("*/180 * * * * *", async function () {
+  console.log("Restarting server");
+
+  await https
+    .get(backendUrl, (res) => {
+      if (res.statusCode === 200) {
+        console.log("Restarted");
+      } else {
+        console.error(`failed to restart with status code: ${res.statusCode}`);
+      }
+    })
+    .on("error", (err) => {
+      console.log("Error during server restart:");
+      console.error("Error ", err.message);
+    });
+});
 
 // Initialize database connections
 const initializeApp = async () => {
@@ -47,7 +69,7 @@ const initializeApp = async () => {
   // Now it's safe to import rate limiter (after Redis is initialized)
   const { apiLimiter } = require('./middleware/rateLimiter');
 
-  // FIXED: Apply rate limiting AND routes together to avoid duplicate route definitions
+  // Apply rate limiting AND routes together to avoid duplicate route definitions
   app.use('/api/v1/chapters', apiLimiter, require('./routes/chapters'));
 
   // Global error handler
